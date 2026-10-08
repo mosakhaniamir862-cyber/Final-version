@@ -1356,71 +1356,6 @@ const state={
 };
 
 /* ==================================================
-   RESPONSE SUBMISSION CONFIG
-================================================== */
-
-/*
-  بعد از ساخت Google Apps Script، آدرس Web App را اینجا قرار بده.
-  تا وقتی خالی باشد، سایت فقط پاسخ‌ها را داخل همان صفحه نگه می‌دارد.
-*/
-const RESPONSE_CONFIG={
-    WEBHOOK_URL:"https://teacherquestinairee.mosakhaniamir862.workers.dev/"
-};
-
-function hasResponseEndpoint(){
-    return RESPONSE_CONFIG.WEBHOOK_URL &&
-           !RESPONSE_CONFIG.WEBHOOK_URL.includes("PASTE_YOUR_");
-}
-
-function buildResponsePayload(sendAnswers){
-    return {
-        type:"teacher-questionnaire",
-        createdAt:new Date().toISOString(),
-        sendAnswers:!!sendAnswers,
-        answers:{...state.answers}
-    };
-}
-
-async function submitResponses(sendAnswers){
-
-    if(!hasResponseEndpoint()){
-        return {
-            ok:false,
-            setupRequired:true
-        };
-    }
-
-    try{
-        const response=await fetch(
-            RESPONSE_CONFIG.WEBHOOK_URL,
-            {
-                method:"POST",
-                headers:{
-                    "Content-Type":"text/plain;charset=utf-8"
-                },
-                body:JSON.stringify(
-                    buildResponsePayload(sendAnswers)
-                )
-            }
-        );
-
-        return {
-            ok:response.ok,
-            setupRequired:false
-        };
-
-    }catch(error){
-
-        console.error("Response submission failed:",error);
-
-        return {
-            ok:false,
-            setupRequired:false
-        };
-    }
-}
-
-/* ==================================================
    SPLASH
 ================================================== */
 
@@ -2405,7 +2340,7 @@ function showQ4(){
 
             positive();
 
-            smoothNavigate(showSendChoice);
+            smoothNavigate(showFinal);
         };
 
     let count=0;
@@ -2449,103 +2384,6 @@ function showQ4(){
 }
 
 /* ==================================================
-   SEND CHOICE
-================================================== */
-
-function showSendChoice(){
-
-    clearQuestion();
-
-    state.current="sendChoice";
-
-    card.classList.remove("sleep-card");
-    stitch.classList.remove("sleeping");
-
-    expression("shy");
-
-    content.innerHTML=`
-
-        <div class="final-title">
-            یه انتخاب کوچیک مونده 💙🩷
-        </div>
-
-        <div class="final-text">
-            اگر دوست داشته باشین، می‌تونین اجازه بدین
-            جواب‌هایی که نوشتین برای امیر ارسال بشه.
-
-            <br><br>
-
-            اگر «نه» رو انتخاب کنین، متن جواب‌ها ارسال نمی‌شه؛
-            فقط یک پیام برای امیر ثبت می‌شه که ترجیح دادین
-            جواب‌ها براتون ارسال نشه.
-
-            <br><br>
-
-            انتخاب با خودتونه 💙
-        </div>
-
-        <div class="buttons">
-
-            <button class="btn" id="sendAnswers">
-                بله، جواب‌ها رو برای امیر بفرست 💙
-            </button>
-
-            <button class="btn secondary" id="dontSendAnswers">
-                نه، جواب‌ها رو ارسال نکن 🩷
-            </button>
-
-        </div>
-
-        <div id="sendStatus" class="final-text" style="display:none;"></div>
-    `;
-
-    animateContent();
-
-    const status=document.getElementById("sendStatus");
-    const sendButton=document.getElementById("sendAnswers");
-    const dontSendButton=document.getElementById("dontSendAnswers");
-
-    async function finish(sendAnswers){
-
-        sendButton.disabled=true;
-        dontSendButton.disabled=true;
-
-        status.style.display="block";
-        status.textContent="در حال ثبت انتخاب شما... 💙";
-
-        const result=await submitResponses(sendAnswers);
-
-        if(result.setupRequired){
-            status.textContent=
-                "سیستم ارسال هنوز توسط سازنده تنظیم نشده؛ پاسخ‌ها در این صفحه باقی می‌مانند. لطفاً به امیر اطلاع بده.";
-            sendButton.disabled=false;
-            dontSendButton.disabled=false;
-            return;
-        }
-
-        if(!result.ok){
-            status.textContent=
-                "ارسال انجام نشد. لطفاً دوباره امتحان کنید.";
-            sendButton.disabled=false;
-            dontSendButton.disabled=false;
-            expression("sad");
-            return;
-        }
-
-        expression(sendAnswers ? "happy" : "shy");
-        status.textContent=
-            sendAnswers
-                ? "با موفقیت برای امیر ارسال شد 💙✨"
-                : "انتخاب شما ثبت شد؛ متن جواب‌ها ارسال نشد. 🩷";
-
-        setTimeout(showFinal,900);
-    }
-
-    sendButton.onclick=()=>finish(true);
-    dontSendButton.onclick=()=>finish(false);
-}
-
-/* ==================================================
    PRIVACY MESSAGE
 ================================================== */
 
@@ -2573,16 +2411,17 @@ function showPrivacyMessage(){
 
         <div class="final-text">
 
-            جواب‌های این صفحه به‌صورت خودکار برای کسی ارسال نمی‌شن.
+            چون شاید دوست نداشته باشین جواب این سؤال‌ها
+            برای من معلوم بشه، این صفحه هیچ جوابی رو به
+            سرور یا شخص دیگه‌ای ارسال نمی‌کنه.
 
             <br><br>
 
-            در پایان، خودتون انتخاب می‌کنین که جواب‌ها برای امیر
-            ارسال بشن یا فقط ثبت بشه که ترجیح دادین جواب‌ها ارسال نشن.
+            جواب‌ها فقط داخل همین صفحه نگه داشته می‌شن
+            و بعد از بستن یا تازه‌کردن صفحه باقی نمی‌مونن.
 
             <br><br>
 
-            اگر ارسال جواب‌ها رو انتخاب نکنین، متن جواب‌ها ارسال نمی‌شه.
             هرجوری خودتون راحت‌تر هستین همون‌طوری جواب بدین،
             یا اگرم نمی‌خواین کلاً جواب ندین.
 
@@ -3070,8 +2909,8 @@ function showSleep(){
 
         <div class="final-text">
 
-            انتخاب ارسال پاسخ‌ها در پایان انجام شد و
-            وضعیت آن ثبت شده است. ✅
+            جواب‌ها فقط در همین صفحه نگه داشته شدند و
+            به هیچ سروری ارسال نشدند. ✅
 
             <br><br>
 
